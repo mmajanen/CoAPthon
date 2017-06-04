@@ -2,7 +2,7 @@ import collections
 import array
 import struct
 
-__author__ = 'Giacomo Tanganelli'
+__author__ = 'Giacomo Tanganelli; for HSML support: Mikko Majanen' #MiM
 
 """ CoAP Parameters """
 
@@ -263,7 +263,16 @@ Content_types = {
     "application/octet-stream": 42,
     "application/exi": 47,
     "application/json": 50,
-    "application/cbor": 60
+    "application/cbor": 60,
+    #"application/hsml":,
+    #"application/hsml.collection":,
+    #"application/hsml.link":,
+    #"application/hsml.item":,
+    "application/hsml+json": 22000,
+    #"application/hsml.collection+json":,
+    "application/hsml.link+json": 22001,
+    "application/hsml.item+json": 22002
+
 }
 
 COAP_PREFACE = "coap://"

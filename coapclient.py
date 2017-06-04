@@ -5,6 +5,7 @@ import sys
 
 from coapthon.client.helperclient import HelperClient
 from coapthon.utils import parse_uri
+import json #MiM
 
 __author__ = 'Giacomo Tanganelli'
 
@@ -54,9 +55,11 @@ def main():  # pragma: no cover
     op = None
     path = None
     payload = None
+    accept_option = "0" #default is 0 = "text/plain" (MiM)
+    
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:p:P:f:", ["help", "operation=", "path=", "payload=",
-                                                               "payload_file="])
+        opts, args = getopt.getopt(sys.argv[1:], "ho:p:P:f:A:", ["help", "operation=", "path=", "payload=", "payload_file=", "accept="])
+        #MiM: added A for Accept
     except getopt.GetoptError as err:
         # print help information and exit:
         print str(err)  # will print something like "option -a not recognized"
@@ -71,10 +74,14 @@ def main():  # pragma: no cover
             payload = a
         elif o in ("-f", "--payload-file"):
             with open(a, 'r') as f:
-                payload = f.read()
+                #payload = f.read()
+                payload = json.load(f)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
+        elif o in ("-A", "--accept"):
+            accept_option = str(a) #MiM
+            print("accept_option: ", accept_option)
         else:
             usage()
             sys.exit(2)
@@ -106,7 +113,7 @@ def main():  # pragma: no cover
             print "Path cannot be empty for a GET request"
             usage()
             sys.exit(2)
-        response = client.get(path)
+        response = client.get(path, accept=accept_option) #MiM added accept
         print response.pretty_print()
         client.stop()
     elif op == "OBSERVE":
@@ -121,7 +128,7 @@ def main():  # pragma: no cover
             print "Path cannot be empty for a DELETE request"
             usage()
             sys.exit(2)
-        response = client.delete(path)
+        response = client.delete(path, accept=accept_option)
         print response.pretty_print()
         client.stop()
     elif op == "POST":
@@ -133,7 +140,7 @@ def main():  # pragma: no cover
             print "Payload cannot be empty for a POST request"
             usage()
             sys.exit(2)
-        response = client.post(path, payload)
+        response = client.post(path, payload, accept=accept_option)
         print response.pretty_print()
         client.stop()
     elif op == "PUT":
@@ -145,7 +152,7 @@ def main():  # pragma: no cover
             print "Payload cannot be empty for a PUT request"
             usage()
             sys.exit(2)
-        response = client.put(path, payload)
+        response = client.put(path, payload, accept=accept_option)
         print response.pretty_print()
         client.stop()
     elif op == "DISCOVER":

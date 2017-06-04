@@ -6,8 +6,10 @@ from coapthon import defines
 from coapthon.client.coap import CoAP
 from coapthon.messages.request import Request
 from coapthon.utils import generate_random_token
+from coapthon.messages.option import Option #MiM
+import json #MiM
 
-__author__ = 'Giacomo Tanganelli'
+__author__ = 'Giacomo Tanganelli; Mikko Majanen for HSML support' 
 
 
 class HelperClient(object):
@@ -92,10 +94,34 @@ class HelperClient(object):
         request = self.mk_request(defines.Codes.GET, path)
         request.token = generate_random_token(2)
 
+        #MiM: add accept option to request
+        """
+        ao = Option()
+        ao.number = defines.OptionRegistry.ACCEPT.number # 17=Accept
+        ao.value = 22000
+        request.add_option(ao)
+        
+        """
         for k, v in kwargs.iteritems():
+            #print("k,v=", k, v)
             if hasattr(request, k):
                 setattr(request, k, v)
-
+                #print(request)
+                if k in "accept":
+                    ao = Option()
+                    ao.number = defines.OptionRegistry.ACCEPT.number # 17=Accept
+                    ao.value = int(v)
+                    request.add_option(ao)
+                #request.accept=v
+                #request.accept(v)
+                
+        
+        print("request: ", request.pretty_print())
+        print("request.accept=", getattr(request, "accept"))
+        print("request.options: ")
+        for op in request.options:
+            print(op.name, op.number, op.value)
+        
         return self.send_request(request, callback, timeout)
 
     def observe(self, path, callback, timeout=None, **kwargs):  # pragma: no cover
@@ -130,6 +156,13 @@ class HelperClient(object):
         for k, v in kwargs.iteritems():
             if hasattr(request, k):
                 setattr(request, k, v)
+                print(k,v)
+                if k in "accept":
+                    ao = Option()
+                    ao.number = defines.OptionRegistry.CONTENT_TYPE.number # 12=Content_type
+                    ao.value = int(v)
+                    request.add_option(ao)
+                    print("added ct=", ao.value)
 
         return self.send_request(request, callback, timeout)
 
@@ -145,12 +178,33 @@ class HelperClient(object):
         """
         request = self.mk_request(defines.Codes.POST, path)
         request.token = generate_random_token(2)
-        request.payload = payload
+        
+        #request.payload = json.dumps(payload)
 
         for k, v in kwargs.iteritems():
             if hasattr(request, k):
                 setattr(request, k, v)
+                if k in "accept":
+                    ao = Option()
+                    ao.number = defines.OptionRegistry.CONTENT_TYPE.number # 12=Content_type
+                    ao.value = int(v)
+                    request.add_option(ao)
+                    print("added ct=", ao.value)
+                    if(ao.value == 50 or ao.value >= 22000):
+                        #jp=json.loads(payload)
+                        #print("jp: ", jp)
+                        print("payload:", payload)
+                        request.payload=json.dumps(payload)
+                        print("json payload dumped")
+                    else:
+                        request.payload=payload
 
+
+        print("request: ", request.pretty_print())
+        print("request.options: ")
+        for op in request.options:
+            print(op.name, op.number, op.value)
+        
         return self.send_request(request, callback, timeout)
 
     def put(self, path, payload, callback=None, timeout=None, **kwargs):  # pragma: no cover
@@ -170,6 +224,18 @@ class HelperClient(object):
         for k, v in kwargs.iteritems():
             if hasattr(request, k):
                 setattr(request, k, v)
+                if k in "accept": #MiM for content_type
+                    ao = Option()
+                    ao.number = defines.OptionRegistry.CONTENT_TYPE.number # 12=Content_type
+                    ao.value = int(v)
+                    request.add_option(ao)
+                    print("added ct=", ao.value)
+                    if(ao.value == 50 or ao.value >= 22000):
+                        print("payload:", payload)
+                        request.payload=json.dumps(payload)
+                        print("json payload dumped: ", request.payload)
+                    else:
+                        request.payload=payload
 
         return self.send_request(request, callback, timeout)
 

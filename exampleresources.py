@@ -1,11 +1,12 @@
 import time
 from coapthon import defines
-
 from coapthon.resources.resource import Resource
 
-__author__ = 'Giacomo Tanganelli'
+import json
 
+__author__ = 'Giacomo Tanganelli; for HSML support: Mikko Majanen' #MiM
 
+    
 class BasicResource(Resource):
     def __init__(self, name="BasicResource", coap_server=None):
         super(BasicResource, self).__init__(name, coap_server, visible=True,
@@ -279,3 +280,331 @@ class AdvancedResourceSeparate(Resource):
     def render_DELETE_separate(self, request, response):
         response.payload = "Response deleted"
         return True, response
+
+    
+#HSMLsensorResource by MiM:
+
+class HSMLsensorResource(Resource):
+
+    def __init__(self, name="HSMLsensorResource", coap_server=None):
+        super(HSMLsensorResource, self).__init__(name, coap_server, visible=True, observable=True, allow_children=True)
+
+        
+        #lst = [22000, 22001, 22002]
+        self.add_content_type("application/hsml+json")
+        
+        print(self.content_type)
+        #self.resource_type = "rt1"
+        
+        self.interface_type = "hsml.collection"
+        self.name = "HSMLsensorResource"
+        self.path = "/sensors/"
+ 
+        
+    def render_GET(self, request):
+        #return selected elements from the collection
+        #e.g., base element, links, item representations.
+        #selection is done in the request
+        print("HSML GET:")
+        print("request:", request)
+        print("request.accept=", request.accept)
+        print("request.uri_query=", request.uri_query)
+        #TODO: filter response based on accept and uri_query
+        #collection IF accept==22000 or if=hsml.collection
+        #link IF accept==22001 or if=hsml.link
+        #item IF accept==22002 or if=hsml.item
+        #?href=sensorname or ?rt=rtype may limit the response
+        #NOTE: currently the implementation supports only one uri-query
+        #even if multiple parameters can be added to the request
+        #by using \& between parameters instead of ?
+
+        rkeys = self._coap_server.root.dump() #resource keys
+        hrefoption=None
+        rtoption=None
+        querys = request.uri_query.split('&')
+        for q in querys:
+            #if 'href=' in request.uri_query:
+            if 'href=' in q:
+                hrefoption = q.split('=')[1]
+                print("hrefoption=", hrefoption)
+            elif 'rt=' in q:
+                rtoption = q.split('=')[1]
+                print("rtoption=", rtoption)
+
+        if(request.accept == 22000 or 'if=hsml.collection' in request.uri_query): 
+        
+            #return the whole collection
+            
+            bi = '[{"bi": "/sensors/"}, {"anchor": "/sensors/", "rel": ["self", "index"]}'
+            bi += ', {"href": "/sensors/", "rel": "action", "method": "create", "schema": {"href": "string", "rt": "string", "n": "string", "v": "int"}, "accept": "application/hsml+json", "type": "create"}' #Link extension: action
+
+            bi += ', {"href": "/sensors/", "rel": "action", "method": "create", "schema": {"href": "string", "rt": "string"}, "accept": "application/hsml.link+json", "type": "create"}'
+
+            bi += ', {"href": "/sensors/", "rel": "action", "method": "create", "schema": {"n": "string", "v": "int"}, "accept": "application/hsml.item+json", "type": "create"}'
+            
+            print(bi)
+            #ADD ALL RESOURCES (LINKS+ITEMS)
+            ritems=""
+            for r in rkeys:
+                if "/sensors/" in r:
+                    res = self._coap_server.root[r]
+                    href = res.name
+                    print("href=", href)
+                    rt = res.resource_type
+                    v = res._payload[0] #"text/plain"
+                    print("rt, v: ", rt, v)
+                    ritems+=', {"href": "'+href+'", "rt": '+rt+'}'
+                    ritems+=', {"n": "'+href+'", "v": '+str(v)+'}'
+
+            print(ritems)
+            if ritems=="":
+                print("no resources found")
+                return self #NOT FOUND
+            
+            self._payload[22000]=bi+ritems+"]"
+            self.actual_content_type = defines.Content_types["application/hsml+json"]
+            return self
+
+        elif(request.accept == 22001 or 'if=hsml.link' in request.uri_query): 
+            #return only links
+            
+            bi = '[{"anchor": "/sensors", "rel": ["self", "index"]}'
+            print(bi)
+            #ADD ALL RESOURCE LINKS
+            ritems=""
+            for r in rkeys:
+                if "/sensors/" in r:
+                    res = self._coap_server.root[r]
+                    href = res.name
+                    print("href=", href)
+                    rt = res.resource_type
+                    if rtoption is None or rtoption in rt:
+                        ritems+=', {"href": "'+href+'", "rt": '+rt+'}'
+                    else:
+                        print("link did not match with the rt query")
+
+            print(ritems)
+            if ritems=="":
+                print("no resources found")
+                return self #NOT FOUND
+            
+            self._payload[22001]=bi+ritems+"]"
+            self.actual_content_type = defines.Content_types["application/hsml.link+json"]
+            return self
+        
+        elif(request.accept == 22002 or 'if=hsml.item' in request.uri_query): 
+            #return only items
+            
+            bi = '[{"bi": "/sensors"}'
+            print(bi)
+            #ADD ALL RESOURCE ITEMS
+            ritems=""
+            for r in rkeys:
+                if "/sensors/" in r:
+                    res = self._coap_server.root[r]
+                    href = res.name
+                    print("href=", href)
+                    v = res._payload[0] #"text/plain"
+                    if hrefoption is None or hrefoption in href:
+                        ritems+=', {"n": "'+href+'", "v": '+str(v)+'}'
+                    else:
+                        print("item did not match with the href query")
+
+            print(ritems)
+            if ritems=="":
+                print("no resources found")
+                return self #NOT FOUND
+            
+            self._payload[22002]=bi+ritems+"]"
+            self.actual_content_type = defines.Content_types["application/hsml.item+json"]
+            return self
+
+        else:
+            print("GET with ct != 22000-22002") #return NOT ACCEPTABLE
+            return self
+
+    def render_PUT(self, request):
+        #TODO: update elements by replacing (PATCH for partial update)
+        #TODO: Should reply with code CHANGED if success
+        #self.edit_resource(request)
+        print("HSML PUT")
+        ct = request.content_type
+        print(ct)
+        
+        
+        if(ct == 22000 or ct == 22001):
+            #update ALL links and items in the collection if not selected 
+            #using uri-query with href=sensorname
+            uriquery = "href" in request.uri_query
+            if uriquery:
+                #TODO: modify the selected item(s)
+                print("href detected: ", request.uri_query)
+                href = request.uri_query.split('=')[1] #[0]='href'
+                print("href=", href)
+                res = self._coap_server.root["/sensors/"+href]
+                payload = json.loads(request.payload)[0] #handles only rt, not v if given in payload... TODO!!!!!!!
+                print("res.payload in json: ", payload)
+                for key, value in payload.items():
+                    print("key=", str(key))
+                    print("value=", str(value))
+                    #set them to the resource:
+                    #if str(key) in "rt" or str(key) in "'rt'":
+                    if "rt" in str(key):
+                        res.resource_type=json.dumps(value)
+                        #res.resource_type=value
+                        print("new rt: ", res.resource_type)
+                    #if str(key) in "'v'":
+                    elif "v" in str(key) and ct==22000:
+                        #res.payload=json.dumps(value)
+                        res.payload=int(value)
+                        print("new payload: ", res.payload)
+                    else:
+                        print("unknown/forbidden parameter: ", str(key))
+                
+            else:
+                print("updating whole collection")
+                rkeys = self._coap_server.root.dump()
+                payload = json.loads(request.payload)[0]
+                print("res.payload in json: ", payload)
+                for r in rkeys:
+                    if "/sensors/" in r:
+                        res = self._coap_server.root[r]
+                        href = res.name
+                        print("href=", href)
+                        for key, value in payload.items():
+                            print("key=", key)
+                            print("value=", value)
+                            #set them to the resource:
+                            if key in "rt":
+                                res.resource_type=value
+                            if key in "v":
+                                res.payload=value
+                            else:
+                                print("unknown/forbidden parameter: ", key)
+        elif ct == 22002:
+            #the selection is in payload's "n":
+            payload = json.loads(request.payload)[0]
+            name=str(payload["n"])
+            value=int(payload["v"])
+            print("name, value=", name, value)
+            res = self._coap_server.root["/sensors/"+name]
+            res.payload=value
+            
+            
+        else:
+            print("wrong content_type: ", ct)
+                
+        
+        return self #should be a CHANGED response code message
+
+    
+    def render_POST(self, request):
+        #create new elements to collection as defined in request payload
+        #res = self.init_resource(request, SensorItemResource())
+        #return res
+
+        print("accept=", request.accept)
+        print("request.payload", request.payload)
+        rpayload = json.loads(request.payload)
+        print(type(rpayload)) 
+        print("rpayload: ", rpayload)
+        ct = request.content_type
+        print(ct)
+        
+        if(request.content_type == 22000): #POST1.txt request file
+            #add new item+link as specified in the request payload:
+            
+            name = str(rpayload[0]["href"])
+            print("name=", name)
+            newRes=SensorItemResource(name=name, coap_server=self._coap_server)
+            newRes.resource_type=rpayload[0]["rt"]
+            newRes.content_type=[0, 22001, 22002]
+            #newRes.interface_type="application/hsml.item" #TODO: if should be given in request's payload!
+            newRes.payload=json.dumps(rpayload[1]["v"]) #only v as text/plain
+            self._coap_server.add_resource("sensors/"+name+"/", newRes)
+
+            return(newRes)
+        
+        if(request.content_type == 22001):
+            print("creating new link ", request.payload) #sensor n and v empty
+            name = str(rpayload[0]["href"])
+            print("name=", name)
+            newRes=SensorItemResource(name=name, coap_server=self._coap_server)
+            newRes.resource_type=rpayload[0]["rt"]
+            #newRes.interface_type="application/hsml.link" #TODO
+        
+            self._coap_server.add_resource("sensors/"+name+"/", newRes)
+            
+            return(newRes)
+        
+        if(request.content_type == 22002):
+            print("22002, creating n and v as defined in payload ", request.payload) #automatically create link!
+            name = str(rpayload[0]["n"])
+            print("name=", name)
+            newRes=SensorItemResource(name=name, coap_server=self._coap_server)
+            #newRes.resource_type=rpayload[0]["rt"]
+            #newRes.interface_type="application/hsml.item"
+            newRes.payload=rpayload[0]["v"]
+            self._coap_server.add_resource("sensors/"+name+"/", newRes)
+
+            return(newRes)
+
+
+    #def render_DELETE(self, request):
+    def render_DELETE_advanced(self, request, response):
+        #remove selected items from collection.
+        #if no items selected, remove the whole collection
+        if "href" in request.uri_query:
+            #delete only the selected item
+            print("deleting ", request.uri_query)
+            href = request.uri_query.split('=')[1] #[0]='href'
+            print("href=", href)
+            res = self._coap_server.root["/sensors/"+href]
+            res.deleted=True
+            print("res name, deleted=", res.name, res.deleted)
+            self._coap_server.root.__delitem__("/sensors/"+href)
+            return (False, response) 
+        elif request.content_type==22000:
+            print("deleting the whole collection")
+            keys = self._coap_server.root.dump()
+            for item in keys:
+               
+                if item not in "/sensors/" and item is not "/":
+                    print(item)
+                    res=self._coap_server.root[item]
+                    res.deleted=True
+                    self._coap_server.root.__delitem__("/sensors/"+res.name)
+                    #/sensors itself will be deleted when returning True
+            self.deleted=True
+            return(True, response)
+
+        else:
+            print("ct=22001/2 and no href in uri-query") #METHOD NOT ALLOWED
+
+        return False
+
+
+
+        
+class SensorItemResource(Resource):
+        
+    def __init__(self, name="SensorItemResource", coap_server=None):
+        super(SensorItemResource, self).__init__(name, coap_server)
+
+
+    def render_GET(self, request):
+        print("SensorItemResource GET")
+        return self
+
+    """
+    def render_POST(self, request):
+        #METHOD NOT ALLOWED
+        return self
+    """
+    
+    def render_PUT(self, request):
+        self.payload=request.payload
+        return self
+    
+    def render_DELETE(self, request):
+        return True
