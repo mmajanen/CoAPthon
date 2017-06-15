@@ -15,19 +15,6 @@ class CoAPServer(CoAP):
     def __init__(self, host, port, multicast=False):
         CoAP.__init__(self, (host, port), multicast)
 
-        #TODO: remove other resources than HSMLsensorResource (MiM)
-        #self.add_resource('basic/', BasicResource())
-        #self.add_resource('storage/', Storage())
-        #self.add_resource('separate/', Separate())
-        #self.add_resource('long/', Long())
-        #self.add_resource('big/', Big())
-        #self.add_resource('void/', voidResource())
-        #self.add_resource('xml/', XMLResource())
-        #self.add_resource('encoding/', MultipleEncodingResource())
-        #self.add_resource('etag/', ETAGResource())
-        #self.add_resource('child/', Child())
-        #self.add_resource('advanced/', AdvancedResource())
-        #self.add_resource('advancedSeparate/', AdvancedResourceSeparate())
 
         self.add_resource('sensors/', HSMLsensorResource(coap_server=self)) #MiM
 
@@ -38,8 +25,8 @@ class CoAPServer(CoAP):
         newRes1.interface_type=["hsml.item", "hsml.link"]
         newRes1.payload="23"
         
-        print("payload: ", newRes1.payload)
-        print("temp: ", newRes1.content_type, newRes1.resource_type, newRes1.interface_type)
+        #print("payload: ", newRes1.payload)
+        #print("temp: ", newRes1.content_type, newRes1.resource_type, newRes1.interface_type)
         
         newRes2 = SensorItemResource(name="humid", coap_server=self)
         newRes2.content_type=ctlist
@@ -49,10 +36,7 @@ class CoAPServer(CoAP):
         
         self.add_resource('sensors/temp/', newRes1)
         self.add_resource('sensors/humid/', newRes2)
-        """
-        {"temp": {"href": "temp", "rel": "item", "n": "temp", "v": 23, "rt": "sensor.temp", "if": "application/hsml.item", "ct": [0, 22001, 22002]},
-         {"humid": {"href": "humid", "rel": "item", "n": "humid", "v": 45, "rt": "sensor.humid", "if": "application/hsml.item", "ct": [0, 22001, 22002]}}}
-        """        
+            
         print "CoAP Server start on " + host + ":" + str(port)
         print self.root.dump()
 

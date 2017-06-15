@@ -19,6 +19,7 @@ def usage():  # pragma: no cover
     print "\t-p, --path=\t\t\tPath of the request"
     print "\t-P, --payload=\t\tPayload of the request"
     print "\t-f, --payload-file=\t\tFile with payload of the request"
+    print "\t-A=\t\t\tAccept/Content-type option of the request"
 
 
 def client_callback(response):

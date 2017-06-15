@@ -1,1 +1,1 @@
-[{"href": "barometer", "rt": "rt1"}]
+[{"href": "barometer", "rt": "sensor.barometer"}]

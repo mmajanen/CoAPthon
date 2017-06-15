@@ -290,11 +290,7 @@ class HSMLsensorResource(Resource):
         super(HSMLsensorResource, self).__init__(name, coap_server, visible=True, observable=True, allow_children=True)
 
         
-        #lst = [22000, 22001, 22002]
         self.add_content_type("application/hsml+json")
-        
-        print(self.content_type)
-        #self.resource_type = "rt1"
         
         self.interface_type = "hsml.collection"
         self.name = "HSMLsensorResource"
@@ -306,24 +302,22 @@ class HSMLsensorResource(Resource):
         #e.g., base element, links, item representations.
         #selection is done in the request
         print("HSML GET:")
-        print("request:", request)
         print("request.accept=", request.accept)
         print("request.uri_query=", request.uri_query)
-        #TODO: filter response based on accept and uri_query
+        #Filter response based on accept and uri_query:
         #collection IF accept==22000 or if=hsml.collection
         #link IF accept==22001 or if=hsml.link
         #item IF accept==22002 or if=hsml.item
         #?href=sensorname or ?rt=rtype may limit the response
         #NOTE: currently the implementation supports only one uri-query
         #even if multiple parameters can be added to the request
-        #by using \& between parameters instead of ?
+        #by using \& between parameters
 
         rkeys = self._coap_server.root.dump() #resource keys
         hrefoption=None
         rtoption=None
         querys = request.uri_query.split('&')
         for q in querys:
-            #if 'href=' in request.uri_query:
             if 'href=' in q:
                 hrefoption = q.split('=')[1]
                 print("hrefoption=", hrefoption)
@@ -424,9 +418,9 @@ class HSMLsensorResource(Resource):
             return self
 
     def render_PUT(self, request):
-        #TODO: update elements by replacing (PATCH for partial update)
-        #TODO: Should reply with code CHANGED if success
-        #self.edit_resource(request)
+        #update elements by replacing
+        #Reply with code CHANGED if success
+        
         print("HSML PUT")
         ct = request.content_type
         print(ct)
@@ -437,25 +431,22 @@ class HSMLsensorResource(Resource):
             #using uri-query with href=sensorname
             uriquery = "href" in request.uri_query
             if uriquery:
-                #TODO: modify the selected item(s)
+                #modify the selected item(s)
                 print("href detected: ", request.uri_query)
                 href = request.uri_query.split('=')[1] #[0]='href'
-                print("href=", href)
+                #print("href=", href)
                 res = self._coap_server.root["/sensors/"+href]
-                payload = json.loads(request.payload)[0] #handles only rt, not v if given in payload... TODO!!!!!!!
-                print("res.payload in json: ", payload)
+                payload = json.loads(request.payload)[0] #handles only rt, not v if given in payload...
+                #print("res.payload in json: ", payload)
                 for key, value in payload.items():
-                    print("key=", str(key))
-                    print("value=", str(value))
+                    #print("key=", str(key))
+                    #print("value=", str(value))
                     #set them to the resource:
-                    #if str(key) in "rt" or str(key) in "'rt'":
+                    
                     if "rt" in str(key):
                         res.resource_type=json.dumps(value)
-                        #res.resource_type=value
                         print("new rt: ", res.resource_type)
-                    #if str(key) in "'v'":
                     elif "v" in str(key) and ct==22000:
-                        #res.payload=json.dumps(value)
                         res.payload=int(value)
                         print("new payload: ", res.payload)
                     else:
@@ -465,15 +456,15 @@ class HSMLsensorResource(Resource):
                 print("updating whole collection")
                 rkeys = self._coap_server.root.dump()
                 payload = json.loads(request.payload)[0]
-                print("res.payload in json: ", payload)
+                #print("res.payload in json: ", payload)
                 for r in rkeys:
                     if "/sensors/" in r:
                         res = self._coap_server.root[r]
                         href = res.name
-                        print("href=", href)
+                        #print("href=", href)
                         for key, value in payload.items():
-                            print("key=", key)
-                            print("value=", value)
+                            #print("key=", key)
+                            #print("value=", value)
                             #set them to the resource:
                             if key in "rt":
                                 res.resource_type=value
@@ -486,7 +477,7 @@ class HSMLsensorResource(Resource):
             payload = json.loads(request.payload)[0]
             name=str(payload["n"])
             value=int(payload["v"])
-            print("name, value=", name, value)
+            #print("name, value=", name, value)
             res = self._coap_server.root["/sensors/"+name]
             res.payload=value
             
@@ -495,19 +486,16 @@ class HSMLsensorResource(Resource):
             print("wrong content_type: ", ct)
                 
         
-        return self #should be a CHANGED response code message
+        return self #a CHANGED response code message
 
     
     def render_POST(self, request):
         #create new elements to collection as defined in request payload
-        #res = self.init_resource(request, SensorItemResource())
-        #return res
 
         print("accept=", request.accept)
         print("request.payload", request.payload)
-        rpayload = json.loads(request.payload)
-        print(type(rpayload)) 
-        print("rpayload: ", rpayload)
+        rpayload = json.loads(request.payload) 
+        
         ct = request.content_type
         print(ct)
         
@@ -515,7 +503,7 @@ class HSMLsensorResource(Resource):
             #add new item+link as specified in the request payload:
             
             name = str(rpayload[0]["href"])
-            print("name=", name)
+            #print("name=", name)
             newRes=SensorItemResource(name=name, coap_server=self._coap_server)
             newRes.resource_type=rpayload[0]["rt"]
             newRes.content_type=[0, 22001, 22002]
@@ -528,7 +516,7 @@ class HSMLsensorResource(Resource):
         if(request.content_type == 22001):
             print("creating new link ", request.payload) #sensor n and v empty
             name = str(rpayload[0]["href"])
-            print("name=", name)
+            #print("name=", name)
             newRes=SensorItemResource(name=name, coap_server=self._coap_server)
             newRes.resource_type=rpayload[0]["rt"]
             #newRes.interface_type="application/hsml.link" #TODO
@@ -540,7 +528,7 @@ class HSMLsensorResource(Resource):
         if(request.content_type == 22002):
             print("22002, creating n and v as defined in payload ", request.payload) #automatically create link!
             name = str(rpayload[0]["n"])
-            print("name=", name)
+            #print("name=", name)
             newRes=SensorItemResource(name=name, coap_server=self._coap_server)
             #newRes.resource_type=rpayload[0]["rt"]
             #newRes.interface_type="application/hsml.item"
@@ -558,7 +546,7 @@ class HSMLsensorResource(Resource):
             #delete only the selected item
             print("deleting ", request.uri_query)
             href = request.uri_query.split('=')[1] #[0]='href'
-            print("href=", href)
+            #print("href=", href)
             res = self._coap_server.root["/sensors/"+href]
             res.deleted=True
             print("res name, deleted=", res.name, res.deleted)
