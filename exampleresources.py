@@ -287,12 +287,13 @@ class AdvancedResourceSeparate(Resource):
 class HSMLsensorResource(Resource):
 
     def __init__(self, name="HSMLsensorResource", coap_server=None):
-        super(HSMLsensorResource, self).__init__(name, coap_server, visible=True, observable=True, allow_children=True)
+        super(HSMLsensorResource, self).__init__(name, coap_server, visible=True, observable=False, allow_children=True)
 
         
-        self.add_content_type("application/hsml+json")
+        #self.add_content_type("application/hsml+json")
+        self.content_type = [22000, 22001, 22002]
         
-        self.interface_type = "hsml.collection"
+        self.interface_type = "[hsml.collection, hsml.link, hsml.item]"
         self.name = "HSMLsensorResource"
         self.path = "/sensors/"
  

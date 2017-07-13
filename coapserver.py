@@ -18,11 +18,13 @@ class CoAPServer(CoAP):
 
         self.add_resource('sensors/', HSMLsensorResource(coap_server=self)) #MiM
 
-        ctlist=[0, 22001, 22002]
+        #ctlist=[0, 22001, 22002]
+        ctlist = 0
         newRes1 = SensorItemResource(name="temp", coap_server=self)
         newRes1.content_type=ctlist
         newRes1.resource_type="sensor.temp"
-        newRes1.interface_type=["hsml.item", "hsml.link"]
+        #newRes1.interface_type=["hsml.item", "hsml.link"]
+        newRes1.interface_type=["core.s", "core.p"]
         newRes1.payload="23"
         
         #print("payload: ", newRes1.payload)
@@ -31,7 +33,8 @@ class CoAPServer(CoAP):
         newRes2 = SensorItemResource(name="humid", coap_server=self)
         newRes2.content_type=ctlist
         newRes2.resource_type="sensor.humid"
-        newRes2.interface_type=["hsml.item", "hsml.link"]
+        #newRes2.interface_type=["hsml.item", "hsml.link"]
+        newRes2.interface_type=["core.s", "core.p"]
         newRes2.payload="67"
         
         self.add_resource('sensors/temp/', newRes1)
