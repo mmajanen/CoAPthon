@@ -507,8 +507,10 @@ class HSMLsensorResource(Resource):
             #print("name=", name)
             newRes=SensorItemResource(name=name, coap_server=self._coap_server)
             newRes.resource_type=rpayload[0]["rt"]
-            newRes.content_type=[0, 22001, 22002]
+            #newRes.content_type=[0, 22001, 22002]
+            newRes.content_type = 0
             #newRes.interface_type="application/hsml.item" #TODO: if should be given in request's payload!
+            newRes.interface_type = ["core.s", "core.p"]
             newRes.payload=json.dumps(rpayload[1]["v"]) #only v as text/plain
             self._coap_server.add_resource("sensors/"+name+"/", newRes)
 
@@ -520,7 +522,7 @@ class HSMLsensorResource(Resource):
             #print("name=", name)
             newRes=SensorItemResource(name=name, coap_server=self._coap_server)
             newRes.resource_type=rpayload[0]["rt"]
-            #newRes.interface_type="application/hsml.link" #TODO
+            newRes.interface_type=["core.s", "core.p"] 
         
             self._coap_server.add_resource("sensors/"+name+"/", newRes)
             
@@ -532,7 +534,7 @@ class HSMLsensorResource(Resource):
             #print("name=", name)
             newRes=SensorItemResource(name=name, coap_server=self._coap_server)
             #newRes.resource_type=rpayload[0]["rt"]
-            #newRes.interface_type="application/hsml.item"
+            newRes.interface_type=["core.s", "core.p"] 
             newRes.payload=rpayload[0]["v"]
             self._coap_server.add_resource("sensors/"+name+"/", newRes)
 
