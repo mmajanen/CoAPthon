@@ -1,1 +1,1 @@
-[{"rt": ["tempsensor", "anothersensor"]}]
+[{"rt": ["sensor.temp", "http://127.0.0.1/ontologies/temperature.owl"]}]
